@@ -1,0 +1,306 @@
+import { _decorator, Component, Node, SpriteFrame, Sprite, Prefab, instantiate, input, Input, EventTouch, Vec2, Vec3, spriteAssembler } from 'cc';
+const { ccclass, property } = _decorator;
+
+@ccclass('Script')
+export class Script extends Component {
+
+    public width: number = 8;
+
+    @property(SpriteFrame)
+    public candyColors: SpriteFrame[] = [null, null, null, null, null, null];
+
+    public squares: Node[] = [];
+    public id: number[] = [];
+
+    public everySquarePosition: Vec2[] = [];
+
+    public locX: number[] = [90, 194, 288, 393, 490, 590, 685, 785, 868];
+    public locY: number[] = [700, 613, 526, 439, 352, 265, 178, 91, 4];
+
+    public x: number = -350;
+    public y: number = 300;
+
+    public tempIndex: number;
+
+    public node1: Node = null;
+    public node2: Node = null;
+
+    @property(Prefab)
+    public block: Prefab = null;
+
+    start() {
+        this.createBoard();
+        // this.crushThreeCandy();
+        input.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
+        input.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        // input.on(Input.EventType.TOUCH_CANCEL, this.onTouchCancel, this);
+        input.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+    }
+
+    onTouchStart(event: EventTouch) {
+        let loc = event.getLocation();
+        let index = this.getIndexes(loc);
+        this.tempIndex = index;
+        this.node1 = this.squares[index];
+    }
+
+    onTouchMove(event: EventTouch) {
+        let loc = event.getLocation();
+        // console.log(loc.x, loc.y);
+        this.squares[this.tempIndex].setWorldPosition(new Vec3(loc.x, loc.y, 0));
+    }
+    onTouchCancel(event: EventTouch) {
+        // this.squares[this.tempIndex].setPosition(this.everySquarePosition[this.tempIndex].x ,this.everySquarePosition[this.tempIndex].y);
+        let loc = event.getLocation();
+        let i = this.getIndexes(loc);
+        this.dragEnd(i);
+    }
+    onTouchEnd(event: EventTouch) {
+        // this.squares[this.tempIndex].setPosition(this.everySquarePosition[this.tempIndex].x ,this.everySquarePosition[this.tempIndex].y);
+        let loc = event.getLocation();
+        let i = this.getIndexes(loc);
+        this.node2 = this.squares[i];
+        this.dragEnd(i);
+    }
+
+    dragEnd(index: number) {
+        let bool = this.checkValid(index);
+        if (bool) {
+            this.squares[this.tempIndex].setPosition(this.everySquarePosition[this.tempIndex].x, this.everySquarePosition[this.tempIndex].y);
+            // Store the sprite frame of node1 in a temporary variable
+            const tempSpriteFrame = this.node1.getComponent(Sprite).spriteFrame;
+
+            // Assign the sprite frame of node2 to node1
+            this.node1.getComponent(Sprite).spriteFrame = this.node2.getComponent(Sprite).spriteFrame;
+
+            // Assign the stored sprite frame to node2
+            this.node2.getComponent(Sprite).spriteFrame = tempSpriteFrame;
+        }
+        else {
+            this.squares[this.tempIndex].setPosition(this.everySquarePosition[this.tempIndex].x, this.everySquarePosition[this.tempIndex].y);
+        }
+        let bool2 = this.checkValidCrush();
+        if (!bool2 && bool) {
+            this.squares[this.tempIndex].setPosition(this.everySquarePosition[this.tempIndex].x, this.everySquarePosition[this.tempIndex].y);
+            // Store the sprite frame of node1 in a temporary variable
+            const tempSpriteFrame = this.node1.getComponent(Sprite).spriteFrame;
+
+            // Assign the sprite frame of node2 to node1
+            this.node1.getComponent(Sprite).spriteFrame = this.node2.getComponent(Sprite).spriteFrame;
+
+            // Assign the stored sprite frame to node2
+            this.node2.getComponent(Sprite).spriteFrame = tempSpriteFrame;
+        }
+    }
+
+    checkValid(index: number) {
+        if (index - this.tempIndex === 1 || this.tempIndex - index === 1 || index - this.tempIndex === 8 || this.tempIndex - index === 8) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    checkValidCrush() {
+        for (let i = 0; i < 61; i++) {
+            let ch = true;
+            let notValid = [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55];
+            for (let n = 0; n < notValid.length; n++) {
+                if (i === notValid[n]) {
+                    ch = false;
+                }
+            }
+
+            if (ch === true) {
+                let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+                let candy2 = this.squares[i + 1].getComponent(Sprite).spriteFrame;
+                let candy3 = this.squares[i + 2].getComponent(Sprite).spriteFrame;
+
+                if (candy1 === candy2 && candy2 === candy3) {
+                    return true;
+                }
+            }
+        }
+        for (let i = 0; i <= 47; i++) {
+            let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+            let candy2 = this.squares[i + 8].getComponent(Sprite).spriteFrame;
+            let candy3 = this.squares[i + 16].getComponent(Sprite).spriteFrame;
+
+            if (candy1 === candy2 && candy2 === candy3) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    crushThreeCandy() {
+        //for rows
+        for (let i = 0; i < 61; i++) {
+            let bool = true;
+            let notValid = [6, 7, 14, 15, 22, 23, 30, 31, 38, 39, 46, 47, 54, 55];
+            for (let n = 0; n < notValid.length; n++) {
+                if (i === notValid[n]) {
+                    bool = false;;
+                }
+            }
+
+            if (bool === true) {
+                let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+                let candy2 = this.squares[i + 1].getComponent(Sprite).spriteFrame;
+                let candy3 = this.squares[i + 2].getComponent(Sprite).spriteFrame;
+
+                if (candy1 === candy2 && candy2 === candy3) {
+                    this.squares[i].getComponent(Sprite).spriteFrame = null;
+                    this.squares[i + 1].getComponent(Sprite).spriteFrame = null;
+                    this.squares[i + 2].getComponent(Sprite).spriteFrame = null;
+                }
+            }
+        }
+
+        //for columns
+        for (let i = 0; i <= 47; i++) {
+            let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+            let candy2 = this.squares[i + 8].getComponent(Sprite).spriteFrame;
+            let candy3 = this.squares[i + 16].getComponent(Sprite).spriteFrame;
+
+            if (candy1 === candy2 && candy2 === candy3) {
+                this.squares[i].getComponent(Sprite).spriteFrame = null;
+                this.squares[i + 8].getComponent(Sprite).spriteFrame = null;
+                this.squares[i + 16].getComponent(Sprite).spriteFrame = null;
+            }
+        }
+
+    }
+
+    deleteTheseInRow(i: number, j: number) {
+        for (let a = i; a <= j; a++) {
+            this.squares[a].getComponent(Sprite).spriteFrame = null;
+        }
+    }
+
+
+    crushFourCandy() {
+        for (let i = 0; i <= 60; i++) {
+            let bool = true;
+            let notValid = [5, 6, 7, 13, 14, 15, 21, 22, 23, 29, 30, 31, 37, 38, 39, 45, 46, 47, 53, 54, 55];
+            for (let n = 0; n < notValid.length; n++) {
+                if (i === notValid[n]) {
+                    bool = false;;
+                }
+            }
+
+            if (bool === true) {
+                let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+                let candy2 = this.squares[i + 1].getComponent(Sprite).spriteFrame;
+                let candy3 = this.squares[i + 2].getComponent(Sprite).spriteFrame;
+                let candy4 = this.squares[i + 3].getComponent(Sprite).spriteFrame;
+
+                if (candy1 === candy2 && candy2 === candy3 && candy3 === candy4) {
+                    this.squares[i].getComponent(Sprite).spriteFrame = null;
+                    this.squares[i + 1].getComponent(Sprite).spriteFrame = null;
+                    this.squares[i + 2].getComponent(Sprite).spriteFrame = null;
+                    this.squares[i + 3].getComponent(Sprite).spriteFrame = null;
+                }
+            }
+        }
+
+        // for columns
+        for (let i = 0; i <= 39; i++) {
+            let candy1 = this.squares[i].getComponent(Sprite).spriteFrame;
+            let candy2 = this.squares[i + 8].getComponent(Sprite).spriteFrame;
+            let candy3 = this.squares[i + 16].getComponent(Sprite).spriteFrame;
+            let candy4 = this.squares[i + 24].getComponent(Sprite).spriteFrame;
+
+            if (candy1 === candy2 && candy2 === candy3 && candy3 === candy4) {
+                this.squares[i].getComponent(Sprite).spriteFrame = null;
+                this.squares[i + 8].getComponent(Sprite).spriteFrame = null;
+                this.squares[i + 16].getComponent(Sprite).spriteFrame = null;
+                this.squares[i + 24].getComponent(Sprite).spriteFrame = null;
+            }
+        }
+    }
+
+    slideDown() {
+        for (let i = 0; i < 55; i++) {
+            if (this.squares[i + this.width].getComponent(Sprite).spriteFrame === null) {
+                this.squares[i + this.width].getComponent(Sprite).spriteFrame = this.squares[i].getComponent(Sprite).spriteFrame;
+                this.squares[i].getComponent(Sprite).spriteFrame = null;
+            }
+        }
+    }
+
+    generateFirstAfterSlideDown() {
+        for (let i = 0; i < this.width; i++) {
+            if (this.squares[i].getComponent(Sprite).spriteFrame === null) {
+                let rand = this.getRandom();
+                this.squares[i].getComponent(Sprite).spriteFrame = this.candyColors[rand];
+            }
+        }
+    }
+
+    createBoard() {
+        let count = 0;
+        for (let i = 0; i < this.width * this.width; i++) {
+            const square = instantiate(this.block);
+            this.id[i] = i;
+            let rand = this.getRandom();
+            let sprite = square.getComponent(Sprite);
+            sprite.spriteFrame = this.candyColors[rand];
+
+            square.setPosition(this.x, this.y);
+
+            this.everySquarePosition[i] = new Vec2(this.x, this.y);
+
+            this.node.addChild(square);
+            this.squares[i] = square;
+            this.x += 100;
+            count += 1;
+
+            if (count === this.width) {
+                this.y -= 87;
+                this.x = -350;
+                count = 0;
+            }
+        }
+    }
+
+    getRandom() {
+        const min = 0;
+        const max = 6;
+
+        let random = Math.random() * (max - min);
+        const rand = Math.floor(random);
+        return rand;
+    }
+
+    getIndexes(loc: Vec2) {
+        let row = 0;
+        let col = 0;
+        for (let i = 0; i < this.locX.length - 1; i++) {
+            if (loc.x > this.locX[i] && loc.x < this.locX[i + 1]) {
+                col = i;
+                break;
+            }
+        }
+        for (let i = this.locY.length - 1; i >= 0; i--) {
+            if (loc.y < this.locY[i] && loc.y > this.locY[i + 1]) {
+                row = i;
+                break;
+            }
+        }
+        let index = col + (row * 8);
+        return index;
+    }
+
+    update(deltaTime: number) {
+        this.crushFourCandy();
+        this.crushThreeCandy();
+        this.slideDown();
+        this.generateFirstAfterSlideDown(); 
+    }
+
+}
+
+
